@@ -1,356 +1,117 @@
-from pprint import pprint
-
 import psycopg2
 
-def create_db(conn1):
-      with conn1.cursor() as cur:
-         cur.execute("""
-         DROP TABLE name CASCADE;
-         DROP TABLE surname CASCADE;
-         DROP TABLE email CASCADE;
+def create_db(cur1):
+         cur1.execute("""
+  
          DROP TABLE Number CASCADE;
          DROP TABLE Un;
          """)
   
-      with conn1.cursor() as cur:
-          cur.execute ("""
-                      CREATE TABLE IF NOT EXISTS name (
-                          nameID SERIAL PRIMARY KEY,
-                          Name VARCHAR (30) NOT NULL);
-                          
-                      CREATE TABLE IF NOT EXISTS surname (
-                          surnameID SERIAL PRIMARY KEY,
-                          surname VARCHAR (40) NOT NULL);   
-                          
-                      CREATE TABLE IF NOT EXISTS email (
-                          emailID SERIAL PRIMARY KEY,
-                          email VARCHAR (40) UNIQUE NOT NULL);   
-                          
-                      CREATE TABLE IF NOT EXISTS Number (
-                          numberID SERIAL PRIMARY KEY,
+         cur1.execute ("""
+                       CREATE TABLE IF NOT EXISTS Number (
+                          numberID INTEGER PRIMARY KEY,
                           number VARCHAR);
                           
                       CREATE TABLE IF NOT EXISTS Un (
                           ID SERIAL PRIMARY KEY,
-                          NameU INTEGER REFERENCES name(nameID),
-                          SurnameU INTEGER REFERENCES  surname(surnameID),
-                          emailU INTEGER REFERENCES email(emailID),
+                          Name VARCHAR (30) NOT NULL,
+                          surname VARCHAR (40) NOT NULL,
+                          email VARCHAR (40) UNIQUE NOT NULL,
                           numberU INTEGER REFERENCES Number(numberID));
                           """)
-          conn1.commit()
+           
+         return print('1.База данных создана!')
           
-      return print('База данных создана!')
-          
-def add_client(conn1):
-  Number_in = 0
-  Name_in = input('Введите имя клиента:')
-  Surname_in = input('Введите фамилию клиента:')
-  Email_in = input('Введите Email клиента:')
-  Number_in = input('Введите номер телефона клиента:')
-  print(Number_in)
-  if Number_in == '':
-     Number_in = 0
-     with conn1.cursor() as cur:
-       cur.execute ("""
-                      INSERT INTO name(Name) 
-                      VALUES (%s)
-                      RETURNING nameID;
-                      """, (Name_in,))
-       name_ID = cur.fetchone()[0]
-       conn1.commit()
-       
-     with conn1.cursor() as cur:
-        cur.execute ("""
-                      INSERT INTO surname(surname) VALUES 
-                      (%s)
-                      RETURNING surnameID;
-                      """, (Surname_in,))
-        surname_ID = cur.fetchone()[0]
-        conn1.commit()
-        
-     with conn1.cursor() as cur:
-        cur.execute ("""
-                      INSERT INTO email(email) VALUES 
-                      (%s)
-                      RETURNING emailID,email;
-                      """, (Email_in,))
-        email_ID = cur.fetchone()[0]
-        conn1.commit()
-        
-     with conn1.cursor() as cur:
-        cur.execute ("""
-                      INSERT INTO Number(number) VALUES 
-                      (%s)
-                      RETURNING numberID,number;
-                      """, (Number_in,))
-        Number_ID = cur.fetchone()[0]
-        conn1.commit()
-        
-     with conn1.cursor() as cur:
-        cur.execute ("""   
-                      INSERT INTO Un(NameU, SurnameU, emailU, numberU) 
+def add_client(cur1, Name_in, Surname_in, Email_in, Number_in):
+       cur1.execute ("""
+                      INSERT INTO Un(Name, surname, email, numberU) 
                       VALUES (%s, %s, %s, %s)
-                      RETURNING ID, NameU, SurnameU, emailU, numberU; 
-                       """, (name_ID, surname_ID, email_ID, Number_ID))
-        return print('Клиент добавлен')
-        
-        
-  else:
-    with conn1.cursor() as cur:
-       cur.execute ("""
-                      INSERT INTO name(Name) 
-                      VALUES (%s)
-                      RETURNING nameID;
-                      """, (Name_in,))
-       name_ID = cur.fetchone()[0]
-       conn1.commit()
-     
-    with conn1.cursor() as cur:
-        cur.execute ("""
-                      INSERT INTO surname(surname) VALUES 
-                      (%s)
-                      RETURNING surnameID;
-                      """, (Surname_in,))
-        surname_ID = cur.fetchone()[0]
-        conn1.commit()
-        
-    with conn1.cursor() as cur:
-        cur.execute ("""
-                      INSERT INTO email(email) VALUES 
-                      (%s)
-                      RETURNING emailID,email;
-                      """, (Email_in,))
-        email_ID = cur.fetchone()[0]
-        conn1.commit()
-        
-    with conn1.cursor() as cur:
-        cur.execute ("""
-                      INSERT INTO Number(number) VALUES 
-                      (%s)
-                      RETURNING numberID,number;
-                      """, (Number_in,))
-        Number_ID = cur.fetchone()[0]
-        conn1.commit()
-        
-    with conn1.cursor() as cur:
-        cur.execute ("""   
-                      INSERT INTO Un(NameU, SurnameU, emailU, numberU) 
-                      VALUES (%s, %s, %s, %s)
-                      RETURNING ID, NameU, SurnameU, emailU, numberU; 
-                       """, (name_ID, surname_ID, email_ID, Number_ID))
-        return print('Клиент добавлен')
+                      RETURNING ID, Name, surname, email, numberU;
+                      """, (Name_in, Surname_in, Email_in, Number_in))
+       ID = cur1.fetchall()
+       return print('2.Клиент добавлен', ID)
       
 
-def add_phone(conn1):
-      with conn1.cursor() as cur:
-        cur.execute ("""   
-                     SELECT ID, Name, surname, email, number FROM Un
-                     FULL JOIN name ON Un.NameU = name.nameID
-                     FULL JOIN surname ON Un.SurnameU = surname.surnameID
-                     FULL JOIN email ON Un.emailU = email.emailID
-                     FULL JOIN Number ON Un.numberU = Number.numberID;
-                       """)
-        List_clients = cur.fetchall()
-        pprint(List_clients)
-        client = int(input ('Введите номер интересующего Вас клиента'))
-        number_client = input ('Введите номер телефона клиента:')
-        with conn1.cursor() as cur:
-           cur.execute ("""
-                        UPDATE Number 
-                        SET number = %s WHERE numberID = %s;
-                        """, (number_client, client)) 
-           conn1.commit()
-        with conn1.cursor() as cur:
-          cur.execute ("""
-                      SELECT * FROM Number;
-                      """)
-          return print('Данные обновлены')   
-      
-def change_client(conn1):
-       with conn1.cursor() as cur:
-        cur.execute ("""   
-                     SELECT ID, Name, surname, email, number FROM Un
-                     FULL JOIN name ON Un.NameU = name.nameID
-                     FULL JOIN surname ON Un.SurnameU = surname.surnameID
-                     FULL JOIN email ON Un.emailU = email.emailID
-                     FULL JOIN Number ON Un.numberU = Number.numberID;
-                       """)
-        List_clients = cur.fetchall()
-        pprint(List_clients) 
-        client = int(input ('Введите номер интересующего Вас клиента'))
-        client_in = input ('Какие данные клиента Вы бы хотели изменить:')
-        if client_in == 'имя' or client_in == 'Имя':
-            number_client = input ('Введите обновленные данные:')
-            with conn1.cursor() as cur:
-              cur.execute ("""
-                            UPDATE name 
-                            SET Name = %s WHERE nameID = %s;
-                            """, (number_client, client)) 
-              conn1.commit()
-            with conn1.cursor() as cur:
-              cur.execute ("""
-                          SELECT * FROM name;
-                          """)
-              return print('Данные обновлены') 
-            
-        elif client_in == 'фамилия' or client_in == 'Фамилия':
-            number_client = input ('Введите обновленные данные:')
-            with conn1.cursor() as cur:
-              cur.execute ("""
-                            UPDATE surname
-                            SET surname = %s WHERE surnameID = %s;
-                            """, (number_client, client)) 
-              conn1.commit()
-            with conn1.cursor() as cur:
-              cur.execute ("""
-                          SELECT * FROM surname;
-                          """)
-              return print('Данные обновлены') 
-            
-        elif client_in == 'email' or client_in == 'Email':
-            number_client = input ('Введите обновленные данные:')
-            with conn1.cursor() as cur:
-              cur.execute ("""
-                            UPDATE email
-                            SET email = %s WHERE emailID = %s;
-                            """, (number_client, client)) 
-              conn1.commit()
-            with conn1.cursor() as cur:
-              cur.execute ("""
-                          SELECT * FROM email;
-                          """)
-              return print('Данные обновлены')
-        else: 
-          return print('Данный параметр не создан')
+def add_phone(cur1, client_in, phone_in):
+           cur1.execute ("""
+                        INSERT INTO Number(numberID,number)
+                        VALUES (%s, %s)
+                        RETURNING numberID, number;
+                        """, (client_in,phone_in)) 
+           ID = cur1.fetchall()
+           
+           cur1.execute ("""
+                        UPDATE Un
+                        SET numberU = %s WHERE ID = %s
+                        RETURNING ID, Name, surname, email, numberU;
+                        """, (client_in, client_in))
+           ID = cur1.fetchall()
+           return print('3.Телефон добавлен', ID)
+          
+    
+def change_client(cur1, client_in, Name_in, Surname_in, Email_in, Number_in):
+        cur1.execute ("""   
+                     UPDATE Number
+                     SET number = %s WHERE numberID = %s
+                     RETURNING numberID, number;
+                     """, (Number_in, client_in))
+        ID = cur1.fetchall()
+        
+        cur1.execute("""
+                        UPDATE Un
+                        SET Name = %s, surname = %s, email = %s, numberU = %s WHERE ID = %s
+                        RETURNING ID, Name, surname, email, numberU;
+                        """, (Name_in, Surname_in, Email_in, client_in, client_in))
+        ID = cur1.fetchall()
+        return print('4.Данные клиента изменены', ID)
                         
-def delete_phone(conn1):
-      with conn1.cursor() as cur:
-        cur.execute ("""   
-                     SELECT ID, Name, surname, email, number FROM Un
-                     FULL JOIN name ON Un.NameU = name.nameID
-                     FULL JOIN surname ON Un.SurnameU = surname.surnameID
-                     FULL JOIN email ON Un.emailU = email.emailID
-                     FULL JOIN Number ON Un.numberU = Number.numberID;
-                       """)
-        List_clients = cur.fetchall()
-        pprint(List_clients)
-        client = int(input ('Введите номер интересующего Вас клиента'))
-        client_in = input ('Вы уверены что хотите удалить номер клиента?')
-        if client_in == 'Да' or client_in == 'да':
-           new_number = ''
-           with conn1.cursor() as cur:
-              cur.execute ("""
-                            UPDATE Number 
-                            SET number = %s WHERE numberID = %s;
-                            """, (new_number, client)) 
-              conn1.commit()
-              return print ('Данные обновлены') 
+def delete_phone(cur1, client_in, phone_in):
+        cur1.execute ("""   
+                    UPDATE Un
+                    SET numberU = %s WHERE ID = %s
+                    RETURNING ID, Name, surname, email, numberU;
+                    """, (phone_in, client_in))
+        ID = cur1.fetchall()
         
-        
-        
+        cur1.execute ("""   
+                     DELETE FROM Number
+                     WHERE numberID = %s
+                     RETURNING numberID, number; 
+                     """, (client_in,))
+        ID = cur1.fetchall()
+        return print('5.Телефон удален', cur1.fetchall())
 
-def delete_client(conn1):
-    with conn1.cursor() as cur:
-        cur.execute ("""   
+def find_client(cur1, Name_in, Surname_in, Email_in, Number_in):
+        cur1.execute ("""   
                      SELECT ID, Name, surname, email, number FROM Un
-                     FULL JOIN name ON Un.NameU = name.nameID
-                     FULL JOIN surname ON Un.SurnameU = surname.surnameID
-                     FULL JOIN email ON Un.emailU = email.emailID
-                     FULL JOIN Number ON Un.numberU = Number.numberID;
-                       """)
-        List_clients = cur.fetchall()
-        pprint(List_clients)  
-        client = input ('Введите номер интересующего Вас клиента')
-        with conn1.cursor() as cur:
-              cur.execute ("""
-                           DELETE FROM Un
-                            WHERE ID = %s;
-                           """, (client))
-              conn1.commit()
-              
-        with conn1.cursor() as cur:
-              cur.execute ("""   
-                            DELETE FROM name
-                            WHERE nameID = %s;
-                            """, (client))
-              conn1.commit()
-             
-        with conn1.cursor() as cur:
-              cur.execute ("""   
-                            DELETE FROM surname
-                            WHERE surnameID = %s;
-                            """, (client))
-              conn1.commit()
-              
-        with conn1.cursor() as cur:
-              cur.execute ("""   
-                            DELETE FROM email
-                            WHERE emailID = %s;
-                            """, (client))
-              conn1.commit()
-               
-        with conn1.cursor() as cur:
-              cur.execute ("""   
-                            DELETE FROM Number
-                            WHERE numberID = %s;
-                            """, (client))
-              conn1.commit()                 
-              return print ('Данные обновлены')
-
-def find_client(conn1):
-      find_email = input ('Введите email Вашего клиента:')
-      with conn1.cursor() as cur:
-        cur.execute ("""   
-                     SELECT ID, Name, surname, email, number FROM Un
-                     FULL JOIN name ON Un.NameU = name.nameID
-                     FULL JOIN surname ON Un.SurnameU = surname.surnameID
-                     FULL JOIN email ON Un.emailU = email.emailID
                      FULL JOIN Number ON Un.numberU = Number.numberID
-                     WHERE email = %s;
-                    """, (find_email,))
-        all_tables = cur.fetchall()
-        print ('Данные клиента:', all_tables)
-  
-def main(comand):
-  print('____________________________')
-  print('1-Функция, создающая структуру БД (таблицы),2-Функция, позволяющая добавить нового клиента,')
-  print('3-Функция, позволяющая добавить телефон для существующего клиента,4-Функция, позволяющая изменить данные о клиенте,')
-  print('5-Функция, позволяющая удалить телефон для существующего клиента.,6-Функция, позволяющая удалить существующего клиента.')
-  print('7-Функция, позволяющая найти клиента по его данным: имени, фамилии, email или телефону')
-  print('____________________________') 
+                     WHERE Name = %s OR surname = %s OR email = %s OR number = %s;
+                     """, (Name_in, Surname_in, Email_in, Number_in))
+        iD = cur1.fetchall()
+        return print ('7.Данные клиента:', iD)
 
-  conn = psycopg2.connect(database="clients", user="postgres", password="1025") 
-
-  while True:
-     
-    comand = input('Введите команду:')
-    
-    if comand == '1':
-      print (create_db(conn))
-      
-    elif comand == '2':
-      print (add_client(conn))   
+def delete_client(cur1, client_in):
+        cur1.execute  ("""   
+                     DELETE FROM Number
+                     WHERE numberID = %s
+                     RETURNING numberID, number; 
+                     """, (client_in,))
+        ID1 = cur1.fetchall()
         
-    elif comand == '3':
-     print(add_phone(conn))
-       
-    elif comand == '4':
-      print(change_client(conn))
+        cur1.execute ("""   
+                     DELETE FROM Un
+                     WHERE ID = %s
+                     RETURNING ID, Name, surname, email, numberU; 
+                     """, (client_in,))
+        iD = cur1.fetchall()
+        return print('6.Клиент удален', cur1.fetchall())
     
-    elif comand == '5':
-      print(delete_phone(conn))
-      
-    elif comand == '6':
-      print(delete_client(conn))
-      
-    elif comand == '7':
-      print(find_client(conn))
-    
-    elif comand =='`':
-      print('выход')
-      conn.close()
-      return    
-
-comand1 = 1
-   
-print(main(comand1))
+with psycopg2.connect(database="clients", user="postgres", password="1025") as conn:
+  with conn.cursor() as cur:
+    print(create_db(cur))
+    print(add_client(cur, 'first_name', 'last_name', 'email', None))
+    print(add_phone(cur, 1, 'phone'))
+    print(change_client(cur, 1,'first_name2', 'last_name2', 'email2','phone2'))
+    print(find_client(cur,'first_name2', 'last_name2', 'email2','phone2'))
+    print(delete_phone(cur, 1, None))
+    print(delete_client(cur, 1))
